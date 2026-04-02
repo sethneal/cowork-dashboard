@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
   if (!slug || typeof slug !== 'string') {
     return NextResponse.json({ error: 'slug is required and must be a string' }, { status: 400 })
   }
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    return NextResponse.json({ error: 'slug must contain only lowercase letters, numbers, and hyphens' }, { status: 400 })
+  }
   if (!title || typeof title !== 'string') {
     return NextResponse.json({ error: 'title is required and must be a string' }, { status: 400 })
   }

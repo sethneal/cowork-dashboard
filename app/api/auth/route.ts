@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const { passcode } = (body as Record<string, unknown>) ?? {}
 
-  if (passcode !== process.env.DASHBOARD_PASSCODE) {
+  if (!process.env.DASHBOARD_PASSCODE || passcode !== process.env.DASHBOARD_PASSCODE) {
     return NextResponse.json({ error: 'Invalid passcode' }, { status: 401 })
   }
 

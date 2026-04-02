@@ -18,5 +18,21 @@ export function validateApiKey(request: Request): boolean {
   const expected = process.env.API_KEY
   if (!expected) throw new Error('API_KEY environment variable must be set')
   const key = request.headers.get('x-api-key')
-  return key === expected
+  if (!key) return false
+  try {
+    return crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expected))
+  } catch {
+    // timingSafeEqual throws if buffers have different lengths
+    return false
+  }
+}
+
+export function validateSessionToken(cookieValue: string | undefined): boolean {
+  if (!cookieValue) return false
+  const expected = computeSessionToken()
+  try {
+    return crypto.timingSafeEqual(Buffer.from(cookieValue), Buffer.from(expected))
+  } catch {
+    return false
+  }
 }

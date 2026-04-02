@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { toggleChecklistItem } from '@/lib/db'
-import { computeSessionToken, SESSION_COOKIE } from '@/lib/auth'
+import { validateSessionToken, SESSION_COOKIE } from '@/lib/auth'
 
 export async function PATCH(
   _request: NextRequest,
@@ -9,7 +9,7 @@ export async function PATCH(
 ) {
   const cookieStore = await cookies()
   const session = cookieStore.get(SESSION_COOKIE)
-  if (!session || session.value !== computeSessionToken()) {
+  if (!validateSessionToken(session?.value)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

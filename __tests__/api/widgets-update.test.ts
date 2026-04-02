@@ -62,4 +62,9 @@ describe('POST /api/widgets/update', () => {
     const res = await POST(makeRequest({ slug: 'brief', title: 'Daily Brief', type: 'markdown', content: '# Today\n- Item 1' }))
     expect(res.status).toBe(200)
   })
+
+  it('returns 400 for slug with invalid characters', async () => {
+    const res = await POST(makeRequest({ slug: 'My Widget!', title: 'Test', type: 'html', content: '<p>hi</p>' }))
+    expect(res.status).toBe(400)
+  })
 })

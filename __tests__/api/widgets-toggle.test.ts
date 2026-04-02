@@ -39,4 +39,14 @@ describe('PATCH /api/widgets/[slug]/items/[id]', () => {
     const res = await PATCH(req, { params: Promise.resolve({ slug: 'groceries', id: 'missing' }) })
     expect(res.status).toBe(404)
   })
+
+  it('returns 401 when session cookie is wrong', async () => {
+    const { cookies } = require('next/headers')
+    ;(cookies as jest.Mock).mockImplementationOnce(() => ({
+      get: jest.fn(() => ({ value: 'invalid-session-token' })),
+    }))
+    const req = new Request('http://localhost')
+    const res = await PATCH(req, { params: Promise.resolve({ slug: 'groceries', id: 'item-1' }) })
+    expect(res.status).toBe(401)
+  })
 })

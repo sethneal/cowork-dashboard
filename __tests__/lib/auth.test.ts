@@ -4,7 +4,7 @@ import crypto from 'crypto'
 process.env.DASHBOARD_PASSCODE = 'testpass'
 process.env.API_KEY = 'testkey123'
 
-import { computeSessionToken, validateApiKey } from '@/lib/auth'
+import { computeSessionToken, validateApiKey, validateSessionToken } from '@/lib/auth'
 
 describe('computeSessionToken', () => {
   it('returns a hex string', () => {
@@ -67,5 +67,23 @@ describe('validateApiKey', () => {
     } finally {
       process.env.API_KEY = saved
     }
+  })
+})
+
+describe('validateSessionToken', () => {
+  it('returns true for the correct session token', () => {
+    const token = computeSessionToken()
+    const { validateSessionToken } = require('@/lib/auth')
+    expect(validateSessionToken(token)).toBe(true)
+  })
+
+  it('returns false for a wrong token', () => {
+    const { validateSessionToken } = require('@/lib/auth')
+    expect(validateSessionToken('wrongtoken')).toBe(false)
+  })
+
+  it('returns false for undefined', () => {
+    const { validateSessionToken } = require('@/lib/auth')
+    expect(validateSessionToken(undefined)).toBe(false)
   })
 })
