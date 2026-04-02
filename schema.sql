@@ -13,5 +13,6 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   widget_id  UUID        NOT NULL REFERENCES widgets(id) ON DELETE CASCADE,
   text       TEXT        NOT NULL,
   checked    BOOLEAN     NOT NULL DEFAULT false,
-  position   INTEGER     NOT NULL DEFAULT 0
+  position   INTEGER     NOT NULL DEFAULT 0,
+  UNIQUE (widget_id, text)
 );

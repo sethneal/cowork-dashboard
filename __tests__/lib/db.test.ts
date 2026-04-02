@@ -1,5 +1,9 @@
 // These tests are skipped by default — they require a real DATABASE_URL.
 // Run manually with: DATABASE_URL=<url> npx jest db.test.ts
+//
+// Note: Tests are not idempotent — run against a fresh DB or clean up manually between runs.
+// upsertWidget uses ON CONFLICT so re-runs are safe for html/markdown tests,
+// but the checklist checked-state test may fail if Apples is already checked from a prior run.
 
 const SKIP = !process.env.DATABASE_URL || process.env.DATABASE_URL === 'postgresql://placeholder'
 

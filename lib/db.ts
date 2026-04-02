@@ -8,7 +8,7 @@ function getSql() {
   }
   return _sql
 }
-const sql = new Proxy({} as ReturnType<typeof neon>, {
+const sql = new Proxy((() => {}) as unknown as ReturnType<typeof neon>, {
   get(_target, prop) {
     const client = getSql()
     const value = (client as any)[prop]
@@ -19,11 +19,13 @@ const sql = new Proxy({} as ReturnType<typeof neon>, {
   },
 }) as ReturnType<typeof neon>
 
+export type WidgetType = 'html' | 'markdown' | 'checklist'
+
 export type Widget = {
   id: string
   slug: string
   title: string
-  type: 'html' | 'markdown' | 'checklist'
+  type: WidgetType
   content: { body?: string }
   updated_at: string
   position: number
@@ -65,7 +67,7 @@ export async function getWidgets(): Promise<Widget[]> {
 export async function upsertWidget(
   slug: string,
   title: string,
-  type: string,
+  type: WidgetType,
   content: object
 ): Promise<{ id: string; slug: string }> {
   const rows = await sql`
@@ -85,33 +87,29 @@ export async function upsertChecklistItems(
   widgetId: string,
   items: string[]
 ): Promise<void> {
-  const existing = await sql`
-    SELECT id, text FROM checklist_items WHERE widget_id = ${widgetId}
-  `
+  // Deduplicate while preserving first-occurrence order
+  const uniqueItems = [...new Set(items)]
 
-  const existingByText = new Map(existing.map((r) => [r.text as string, r.id as string]))
-  const newTextSet = new Set(items)
+  // All mutations in one transaction
+  await getSql().transaction(async (txSql) => {
+    // Delete items no longer in the list
+    await txSql`
+      DELETE FROM checklist_items
+      WHERE widget_id = ${widgetId}
+        AND text != ALL(${uniqueItems})
+    `
 
-  const toDelete = existing
-    .filter((r) => !newTextSet.has(r.text as string))
-    .map((r) => r.id as string)
-
-  if (toDelete.length > 0) {
-    await sql`DELETE FROM checklist_items WHERE id = ANY(${toDelete})`
-  }
-
-  for (let i = 0; i < items.length; i++) {
-    const text = items[i]
-    const existingId = existingByText.get(text)
-    if (existingId) {
-      await sql`UPDATE checklist_items SET position = ${i} WHERE id = ${existingId}`
-    } else {
-      await sql`
+    // Bulk upsert: insert new items, update position for existing ones
+    // (ON CONFLICT preserves checked state for existing items)
+    for (let i = 0; i < uniqueItems.length; i++) {
+      await txSql`
         INSERT INTO checklist_items (widget_id, text, checked, position)
-        VALUES (${widgetId}, ${text}, false, ${i})
+        VALUES (${widgetId}, ${uniqueItems[i]}, false, ${i})
+        ON CONFLICT (widget_id, text)
+        DO UPDATE SET position = EXCLUDED.position
       `
     }
-  }
+  })
 }
 
 export async function toggleChecklistItem(
