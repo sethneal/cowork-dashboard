@@ -29,4 +29,9 @@ describe('sanitizeHtml', () => {
       expect(sanitizeHtml(input)).toContain(tag)
     }
   })
+
+  it('strips style attributes', () => {
+    const input = '<p style="background:url(http://evil.com)">text</p>'
+    expect(sanitizeHtml(input)).not.toContain('style=')
+  })
 })

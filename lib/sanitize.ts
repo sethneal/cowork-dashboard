@@ -7,7 +7,7 @@ export function sanitizeHtml(dirty: string): string {
     ]),
     allowedAttributes: {
       ...sanitizeHtmlLib.defaults.allowedAttributes,
-      '*': ['class', 'style'],
+      '*': ['class'],
     },
   })
 }
