@@ -115,7 +115,7 @@ Cowork pushes a flat array of strings:
 ```json
 ["Apples", "Chicken breast", "Olive oil"]
 ```
-The API creates or updates rows in `checklist_items`. Checked state is preserved for items whose text is unchanged across pushes.
+The API creates or updates rows in `checklist_items`. Checked state is preserved for items whose text is unchanged across pushes. Items whose text has changed are treated as new items (unchecked). Items no longer present in the push are deleted.
 
 ---
 
@@ -152,7 +152,7 @@ Returns all widgets ordered by `updated_at` descending. Called by the frontend o
 
 ### Passcode Gate
 
-On first visit (or after session expires), the user sees a single passcode input. On success, a session cookie is set (httpOnly, secure). No username. No account.
+On first visit (or after session expires), the user sees a single passcode input. On success, a session cookie is set (httpOnly, secure, 7-day expiry). No username. No account. All dashboard API routes (`GET /api/widgets`, checklist toggle) verify the session cookie in the route handler and return `401` if absent or invalid.
 
 ### Dashboard Page
 
@@ -165,7 +165,7 @@ On first visit (or after session expires), the user sees a single passcode input
 
 | Type | Renderer |
 |---|---|
-| `html` | Sanitized HTML rendered in a contained div |
+| `html` | Sanitized HTML rendered in a contained div (sanitized server-side using `sanitize-html` before storage) |
 | `markdown` | Parsed and rendered (using a lightweight library e.g. `marked`) |
 | `checklist` | Interactive checklist; each item has a checkbox that toggles `checked` state via `PATCH /api/widgets/[slug]/items/[id]` |
 
