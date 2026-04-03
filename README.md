@@ -2,7 +2,7 @@
 
 A mobile-first dashboard that aggregates outputs from your [Claude Cowork](https://claude.ai) scheduled tasks into one place — accessible from anywhere on your phone.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FYOUR_USERNAME%2Fpersonal-dashboard&env=DASHBOARD_PASSCODE,API_KEY&envDescription=Set%20a%20passcode%20for%20viewing%20and%20an%20API%20key%20for%20Cowork%20pushes&project-name=my-personal-dashboard&stores=[{"type":"neon"}])
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsethneal%2Fcowork-dashboard&env=DASHBOARD_PASSCODE,API_KEY&envDescription=Set%20a%20passcode%20for%20viewing%20and%20an%20API%20key%20for%20Cowork%20pushes&project-name=cowork-dashboard&stores=[{"type":"neon"}])
 
 ## What It Does
 
@@ -33,8 +33,8 @@ See [COWORK-INTEGRATION.md](./COWORK-INTEGRATION.md) for copy-paste instructions
 ## Running Locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/personal-dashboard
-cd personal-dashboard
+git clone https://github.com/sethneal/cowork-dashboard
+cd cowork-dashboard
 npm install
 cp .env.local.example .env.local
 # Edit .env.local with your values and a local Neon DATABASE_URL
