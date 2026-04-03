@@ -3,7 +3,11 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 async function migrate() {
-  const sql = neon(process.env.DATABASE_URL!)
+  if (!process.env.DATABASE_URL) {
+    console.log('No DATABASE_URL set — skipping migration')
+    return
+  }
+  const sql = neon(process.env.DATABASE_URL)
   const schema = readFileSync(join(process.cwd(), 'schema.sql'), 'utf-8')
   const statements = schema
     .split(';')
