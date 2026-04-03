@@ -44,7 +44,37 @@ export type ChecklistItem = {
   position: number
 }
 
+// Runs on every cold start — safe because all DDL uses IF NOT EXISTS
+let _migrated = false
+async function ensureTables() {
+  if (_migrated) return
+  const client = getSql()
+  await client.unsafe(`
+    CREATE TABLE IF NOT EXISTS widgets (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('html', 'markdown', 'checklist')),
+      content JSONB NOT NULL DEFAULT '{}',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      position INTEGER NOT NULL DEFAULT 0
+    )
+  `)
+  await client.unsafe(`
+    CREATE TABLE IF NOT EXISTS checklist_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      widget_id UUID NOT NULL REFERENCES widgets(id) ON DELETE CASCADE,
+      text TEXT NOT NULL,
+      checked BOOLEAN NOT NULL DEFAULT false,
+      position INTEGER NOT NULL DEFAULT 0,
+      UNIQUE (widget_id, text)
+    )
+  `)
+  _migrated = true
+}
+
 export async function getWidgets(): Promise<Widget[]> {
+  await ensureTables()
   const rows = await sql`
     SELECT
       w.id, w.slug, w.title, w.type, w.content, w.updated_at, w.position,
@@ -74,6 +104,7 @@ export async function upsertWidget(
   type: WidgetType,
   content: object
 ): Promise<{ id: string; slug: string }> {
+  await ensureTables()
   const rows = await sql`
     INSERT INTO widgets (slug, title, type, content, updated_at)
     VALUES (${slug}, ${title}, ${type}, ${JSON.stringify(content)}, NOW())
@@ -94,10 +125,10 @@ export async function upsertChecklistItems(
   // Deduplicate while preserving first-occurrence order
   const uniqueItems = [...new Set(items)]
 
-  const sql = getSql()
+  const client = getSql()
 
   // Delete items no longer in the list
-  await sql`
+  await client`
     DELETE FROM checklist_items
     WHERE widget_id = ${widgetId}
       AND text != ALL(${uniqueItems})
@@ -106,7 +137,7 @@ export async function upsertChecklistItems(
   // Bulk upsert: insert new items, update position for existing ones
   // (ON CONFLICT preserves checked state for existing items)
   for (let i = 0; i < uniqueItems.length; i++) {
-    await sql`
+    await client`
       INSERT INTO checklist_items (widget_id, text, checked, position)
       VALUES (${widgetId}, ${uniqueItems[i]}, false, ${i})
       ON CONFLICT (widget_id, text)
