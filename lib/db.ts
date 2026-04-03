@@ -4,7 +4,11 @@ import { neon } from '@neondatabase/serverless'
 let _sql: ReturnType<typeof neon> | null = null
 function getSql() {
   if (!_sql) {
-    _sql = neon(process.env.DATABASE_URL!)
+    const url =
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.NEON_DATABASE_URL
+    _sql = neon(url!)
   }
   return _sql
 }
