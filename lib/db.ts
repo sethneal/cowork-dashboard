@@ -80,7 +80,7 @@ export async function upsertWidget(
       updated_at = NOW()
     RETURNING id, slug
   `
-  return rows[0] as { id: string; slug: string }
+  return (rows as { id: string; slug: string }[])[0]
 }
 
 export async function upsertChecklistItems(
@@ -90,26 +90,25 @@ export async function upsertChecklistItems(
   // Deduplicate while preserving first-occurrence order
   const uniqueItems = [...new Set(items)]
 
-  // All mutations in one transaction
-  await getSql().transaction(async (txSql) => {
-    // Delete items no longer in the list
-    await txSql`
-      DELETE FROM checklist_items
-      WHERE widget_id = ${widgetId}
-        AND text != ALL(${uniqueItems})
-    `
+  const sql = getSql()
 
-    // Bulk upsert: insert new items, update position for existing ones
-    // (ON CONFLICT preserves checked state for existing items)
-    for (let i = 0; i < uniqueItems.length; i++) {
-      await txSql`
-        INSERT INTO checklist_items (widget_id, text, checked, position)
-        VALUES (${widgetId}, ${uniqueItems[i]}, false, ${i})
-        ON CONFLICT (widget_id, text)
-        DO UPDATE SET position = EXCLUDED.position
-      `
-    }
-  })
+  // Delete items no longer in the list
+  await sql`
+    DELETE FROM checklist_items
+    WHERE widget_id = ${widgetId}
+      AND text != ALL(${uniqueItems})
+  `
+
+  // Bulk upsert: insert new items, update position for existing ones
+  // (ON CONFLICT preserves checked state for existing items)
+  for (let i = 0; i < uniqueItems.length; i++) {
+    await sql`
+      INSERT INTO checklist_items (widget_id, text, checked, position)
+      VALUES (${widgetId}, ${uniqueItems[i]}, false, ${i})
+      ON CONFLICT (widget_id, text)
+      DO UPDATE SET position = EXCLUDED.position
+    `
+  }
 }
 
 export async function toggleChecklistItem(
@@ -125,5 +124,5 @@ export async function toggleChecklistItem(
       AND w.slug = ${widgetSlug}
     RETURNING ci.id, ci.widget_id, ci.text, ci.checked, ci.position
   `
-  return (rows[0] as ChecklistItem) ?? null
+  return ((rows as ChecklistItem[])[0]) ?? null
 }

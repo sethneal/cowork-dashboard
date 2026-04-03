@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getWidgets } from '@/lib/db'
 import { WidgetCard } from '@/components/WidgetCard'
 import { HtmlWidget } from '@/components/HtmlWidget'

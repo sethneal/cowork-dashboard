@@ -10,7 +10,7 @@ async function migrate() {
     .map((s) => s.trim())
     .filter(Boolean)
   for (const statement of statements) {
-    await sql.transaction([sql(statement)])
+    await sql.unsafe(statement)
   }
   console.log('Migration complete')
 }
