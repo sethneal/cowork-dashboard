@@ -1,10 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { getWidgets } from '@/lib/db'
-import { WidgetCard } from '@/components/WidgetCard'
-import { HtmlWidget } from '@/components/HtmlWidget'
-import { MarkdownWidget } from '@/components/MarkdownWidget'
-import { ChecklistWidget } from '@/components/ChecklistWidget'
+import { DashboardTabs } from '@/components/DashboardTabs'
 
 export default async function DashboardPage() {
   const widgets = await getWidgets()
@@ -21,17 +18,7 @@ export default async function DashboardPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {widgets.map((widget) => (
-            <WidgetCard key={widget.id} title={widget.title} updatedAt={widget.updated_at}>
-              {widget.type === 'html' && <HtmlWidget content={widget.content.body ?? ''} />}
-              {widget.type === 'markdown' && <MarkdownWidget content={widget.content.body ?? ''} />}
-              {widget.type === 'checklist' && (
-                <ChecklistWidget slug={widget.slug} items={widget.items} />
-              )}
-            </WidgetCard>
-          ))}
-        </div>
+        <DashboardTabs widgets={widgets} />
       )}
     </main>
   )
