@@ -29,6 +29,9 @@ export function DashboardTabs({ widgets }: Props) {
     })
   }, [activeIndex])
 
+  const isSnake = activeIndex === widgets.length
+  const widget = !isSnake ? widgets[activeIndex] : null
+
   function goTo(index: number) {
     setActiveIndex(Math.max(0, Math.min(index, totalTabs - 1)))
   }
@@ -42,15 +45,14 @@ export function DashboardTabs({ widgets }: Props) {
     if (touchStartX.current === null || touchStartY.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+    // Don't steal swipes from the Snake game
+    if (isSnake) return
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
       goTo(dx < 0 ? activeIndex + 1 : activeIndex - 1)
     }
-    touchStartX.current = null
-    touchStartY.current = null
   }
-
-  const isSnake = activeIndex === widgets.length
-  const widget = !isSnake ? widgets[activeIndex] : null
 
   // Tab labels — widget titles + snake tab
   const tabs = [
