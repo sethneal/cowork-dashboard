@@ -6,7 +6,9 @@ const COLS = 20
 const ROWS = 20
 const CELL = 16
 const SIZE = COLS * CELL // 320px
-const BASE_INTERVAL = 130
+const BASE_INTERVAL = 220 // slower start
+const MIN_INTERVAL = 60   // speed cap
+const SPEED_FACTOR = 0.95 // 5% faster per food
 
 type Point = { x: number; y: number }
 type Dir = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'
@@ -24,41 +26,28 @@ function randomFood(snake: Point[]): Point {
   return pos
 }
 
-function draw(
-  canvas: HTMLCanvasElement,
-  snake: Point[],
-  food: Point,
-  status: Status,
-  score: number
-) {
+function draw(canvas: HTMLCanvasElement, snake: Point[], food: Point, status: Status, score: number) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // Background
   ctx.fillStyle = '#0f172a'
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  // Subtle grid
   ctx.fillStyle = '#1e293b'
-  for (let x = 0; x < COLS; x++) {
-    for (let y = 0; y < ROWS; y++) {
+  for (let x = 0; x < COLS; x++)
+    for (let y = 0; y < ROWS; y++)
       ctx.fillRect(x * CELL + 7, y * CELL + 7, 2, 2)
-    }
-  }
 
-  // Food
   ctx.fillStyle = '#ef4444'
   ctx.beginPath()
   ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2)
   ctx.fill()
 
-  // Snake
   snake.forEach((seg, i) => {
     ctx.fillStyle = i === 0 ? '#4ade80' : '#16a34a'
     ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2)
   })
 
-  // Game over overlay
   if (status === 'dead') {
     ctx.fillStyle = 'rgba(0,0,0,0.6)'
     ctx.fillRect(0, 0, SIZE, SIZE)
@@ -71,7 +60,6 @@ function draw(
     ctx.fillText(`Score: ${score}`, SIZE / 2, SIZE / 2 + 12)
   }
 
-  // Idle overlay
   if (status === 'idle') {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
     ctx.fillRect(0, 0, SIZE, SIZE)
@@ -85,92 +73,94 @@ function draw(
   }
 }
 
+const INITIAL_SNAKE: Point[] = [
+  { x: 10, y: 10 },
+  { x: 9,  y: 10 },
+  { x: 8,  y: 10 },
+  { x: 7,  y: 10 },
+]
+
 export function SnakeGame() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const snakeRef = useRef<Point[]>([{ x: 10, y: 10 }])
-  const foodRef = useRef<Point>({ x: 5, y: 5 })
-  const dirRef = useRef<Dir>('RIGHT')
+  const canvasRef  = useRef<HTMLCanvasElement>(null)
+  const snakeRef   = useRef<Point[]>(INITIAL_SNAKE)
+  const foodRef    = useRef<Point>({ x: 5, y: 5 })
+  const dirRef     = useRef<Dir>('RIGHT')
   const nextDirRef = useRef<Dir>('RIGHT')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const touchRef = useRef<{ x: number; y: number } | null>(null)
+  const speedRef   = useRef<number>(BASE_INTERVAL)
+  const touchRef   = useRef<{ x: number; y: number } | null>(null)
 
-  const [score, setScore] = useState(0)
+  const [score, setScore]   = useState(0)
   const [status, setStatus] = useState<Status>('idle')
 
-  function redraw(currentStatus: Status, currentScore: number) {
-    const canvas = canvasRef.current
-    if (canvas) draw(canvas, snakeRef.current, foodRef.current, currentStatus, currentScore)
+  function stopLoop() {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
   }
 
-  function stopLoop() {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+  function startLoop(interval: number) {
+    stopLoop()
+    intervalRef.current = setInterval(tick, interval)
+  }
+
+  function tick() {
+    dirRef.current = nextDirRef.current
+    const head = snakeRef.current[0]
+    const deltas: Record<Dir, Point> = {
+      UP: { x: 0, y: -1 }, DOWN: { x: 0, y: 1 },
+      LEFT: { x: -1, y: 0 }, RIGHT: { x: 1, y: 0 },
+    }
+    const next = { x: head.x + deltas[dirRef.current].x, y: head.y + deltas[dirRef.current].y }
+
+    if (
+      next.x < 0 || next.x >= COLS ||
+      next.y < 0 || next.y >= ROWS ||
+      snakeRef.current.some((s) => s.x === next.x && s.y === next.y)
+    ) {
+      stopLoop()
+      setStatus('dead')
+      setScore((s) => {
+        if (canvasRef.current) draw(canvasRef.current, snakeRef.current, foodRef.current, 'dead', s)
+        return s
+      })
+      return
+    }
+
+    const ate = next.x === foodRef.current.x && next.y === foodRef.current.y
+    snakeRef.current = ate
+      ? [next, ...snakeRef.current]
+      : [next, ...snakeRef.current.slice(0, -1)]
+
+    if (ate) {
+      foodRef.current = randomFood(snakeRef.current)
+      // Speed up 5%, capped at MIN_INTERVAL, then restart loop at new speed
+      speedRef.current = Math.max(MIN_INTERVAL, Math.round(speedRef.current * SPEED_FACTOR))
+      startLoop(speedRef.current)
+      setScore((s) => {
+        const ns = s + 1
+        if (canvasRef.current) draw(canvasRef.current, snakeRef.current, foodRef.current, 'playing', ns)
+        return ns
+      })
+    } else {
+      if (canvasRef.current) draw(canvasRef.current, snakeRef.current, foodRef.current, 'playing', 0)
     }
   }
 
   function startGame() {
     stopLoop()
-    const initialSnake = [{ x: 10, y: 10 }]
-    snakeRef.current = initialSnake
-    foodRef.current = randomFood(initialSnake)
-    dirRef.current = 'RIGHT'
+    snakeRef.current  = [...INITIAL_SNAKE]
+    foodRef.current   = randomFood(INITIAL_SNAKE)
+    dirRef.current    = 'RIGHT'
     nextDirRef.current = 'RIGHT'
+    speedRef.current  = BASE_INTERVAL
     setScore(0)
     setStatus('playing')
-
-    intervalRef.current = setInterval(() => {
-      dirRef.current = nextDirRef.current
-
-      const head = snakeRef.current[0]
-      const deltas: Record<Dir, Point> = {
-        UP: { x: 0, y: -1 }, DOWN: { x: 0, y: 1 },
-        LEFT: { x: -1, y: 0 }, RIGHT: { x: 1, y: 0 },
-      }
-      const d = deltas[dirRef.current]
-      const next = { x: head.x + d.x, y: head.y + d.y }
-
-      // Wall or self collision → game over
-      if (
-        next.x < 0 || next.x >= COLS ||
-        next.y < 0 || next.y >= ROWS ||
-        snakeRef.current.some((s) => s.x === next.x && s.y === next.y)
-      ) {
-        stopLoop()
-        setStatus('dead')
-        setScore((s) => {
-          if (canvasRef.current)
-            draw(canvasRef.current, snakeRef.current, foodRef.current, 'dead', s)
-          return s
-        })
-        return
-      }
-
-      const ate = next.x === foodRef.current.x && next.y === foodRef.current.y
-      snakeRef.current = ate
-        ? [next, ...snakeRef.current]
-        : [next, ...snakeRef.current.slice(0, -1)]
-
-      if (ate) {
-        foodRef.current = randomFood(snakeRef.current)
-        setScore((s) => {
-          const ns = s + 1
-          if (canvasRef.current)
-            draw(canvasRef.current, snakeRef.current, foodRef.current, 'playing', ns)
-          return ns
-        })
-      } else {
-        if (canvasRef.current)
-          draw(canvasRef.current, snakeRef.current, foodRef.current, 'playing', 0)
-      }
-    }, BASE_INTERVAL)
+    startLoop(BASE_INTERVAL)
   }
 
   function changeDir(next: Dir) {
     if (next !== OPPOSITE[dirRef.current]) nextDirRef.current = next
   }
 
-  // Keyboard
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const map: Partial<Record<string, Dir>> = {
@@ -181,16 +171,10 @@ export function SnakeGame() {
       if (dir) { e.preventDefault(); changeDir(dir) }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    if (canvasRef.current) draw(canvasRef.current, snakeRef.current, foodRef.current, 'idle', 0)
+    return () => { window.removeEventListener('keydown', onKey); stopLoop() }
   }, [])
 
-  // Draw initial idle state
-  useEffect(() => {
-    redraw('idle', 0)
-    return stopLoop
-  }, [])
-
-  // Swipe
   function onTouchStart(e: React.TouchEvent) {
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
     e.preventDefault()
@@ -226,18 +210,12 @@ export function SnakeGame() {
       />
 
       {status === 'dead' && (
-        <button
-          onClick={startGame}
-          className="px-5 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors font-mono"
-        >
+        <button onClick={startGame} className="px-5 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors font-mono">
           Play Again
         </button>
       )}
       {status === 'idle' && (
-        <button
-          onClick={startGame}
-          className="px-5 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors font-mono"
-        >
+        <button onClick={startGame} className="px-5 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors font-mono">
           Start
         </button>
       )}
