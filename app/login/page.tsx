@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">My Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">Cowork Dashboard</h1>
         <p className="text-sm text-gray-500 text-center mb-8">Enter your passcode to continue</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input

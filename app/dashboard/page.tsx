@@ -8,7 +8,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Cowork Dashboard</h1>
 
       {widgets.length === 0 ? (
         <div className="text-center mt-20 space-y-3">
